@@ -37,6 +37,7 @@ type Service interface {
 
 	GetSubscribeUserInfo(ctx context.Context, userId string) (*SubscribeUserInfo, error)
 	GetSubscribeUserShareResource(ctx context.Context, userId string, opts ...SubscribeUserShareResourceOptionFunc) ([]*ShareResourceInfo, int64, error)
+	GetSubscribeUserShareResourceAll(ctx context.Context, userId string) ([]*ShareResourceInfo, int64, error)
 	GetShareInfo(ctx context.Context, shareCode string, accessCode string) (*ShareInfo, error)
 }
 

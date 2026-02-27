@@ -13,7 +13,7 @@ type Options struct {
 
 func defaultOptions() *Options {
 	return &Options{
-		WorkerCount:    1,
+		WorkerCount:    4,
 		BufferSize:     89120,
 		ProcessTimeout: time.Minute * 30,
 		MaxRetry:       3,

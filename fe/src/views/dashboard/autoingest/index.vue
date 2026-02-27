@@ -84,6 +84,12 @@
           </template>
           重置
         </n-button>
+        <n-button type="warning" @click="handleRetryAllFailed" style="margin-left: 8px">
+          批量重试失败
+        </n-button>
+        <n-button type="error" @click="handleDeleteErrorLogs" style="margin-left: 8px">
+          删除错误日志
+        </n-button>
       </div>
       <div class="header-right">
         <n-text depth="3">最近刷新：{{ refreshTime.format('YYYY-MM-DD HH:mm:ss') }}</n-text>
@@ -163,6 +169,8 @@ import {
   refreshAutoIngestPlan,
   deleteAutoIngestPlan,
   getAutoIngestLogList,
+  retryFailedAutoIngest,
+  deleteErrorLogs,
   type PlanLogResult,
 } from '@/api/autoingest'
 import { getCloudTokenList } from '@/api/cloudtoken'
@@ -555,6 +563,42 @@ const handleLogReset = () => {
   fetchLogList()
 }
 
+// 批量重试所有失败任务
+const handleRetryAllFailed = () => {
+  const planId = logQuery.planId
+  retryFailedAutoIngest({ planId })
+    .then((res) => {
+      if (res.code === 200 || res.code === 0) {
+        message.success('已下发重试任务')
+        fetchLogList()
+      } else {
+        message.error(res.msg || '重试失败')
+      }
+    })
+    .catch((err: unknown) => {
+      console.error('重试失败', err)
+      message.error('重试失败')
+    })
+}
+
+// 删除错误日志
+const handleDeleteErrorLogs = () => {
+  const planId = logQuery.planId
+  deleteErrorLogs({ planId })
+    .then((res) => {
+      if (res.code === 200 || res.code === 0) {
+        message.success(`已删除 ${res.data} 条错误日志`)
+        fetchLogList()
+      } else {
+        message.error(res.msg || '删除失败')
+      }
+    })
+    .catch((err: unknown) => {
+      console.error('删除失败', err)
+      message.error('删除失败')
+    })
+}
+
 const logColumns: DataTableColumns<Models.AutoIngestLog> = [
   { title: 'ID', key: 'id', width: 90, align: 'center' },
   { title: '计划名称', key: 'planName', width: 100, align: 'center', ellipsis: { tooltip: true } },
@@ -582,7 +626,44 @@ const logColumns: DataTableColumns<Models.AutoIngestLog> = [
     align: 'center',
     render: (row) => formatDT(row.createdAt),
   },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 100,
+    align: 'center',
+    render: (row) => {
+      if (row.level === 'error') {
+        return h(
+          NButton,
+          {
+            size: 'small',
+            type: 'warning',
+            onClick: () => onRetryFailed(row.planId),
+          },
+          { default: () => '重试' }
+        )
+      }
+      return null
+    },
+  },
 ]
+
+// 重试失败任务
+const onRetryFailed = (planId?: number) => {
+  retryFailedAutoIngest({ planId })
+    .then((res) => {
+      if (res.code === 200 || res.code === 0) {
+        message.success('已下发重试任务')
+        fetchLogList()
+      } else {
+        message.error(res.msg || '重试失败')
+      }
+    })
+    .catch((err: unknown) => {
+      console.error('重试失败', err)
+      message.error('重试失败')
+    })
+}
 
 const fetchLogList = () => {
   logLoading.value = true

@@ -39,6 +39,7 @@ ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=sum.golang.google.cn
 
 COPY go.mod go.sum ./
+RUN go mod tidy
 RUN go mod download
 
 COPY . .
@@ -56,6 +57,7 @@ ARG BINARY_NAME=share
 
 # 构建应用 - 使用与 Makefile 相同的参数
 RUN echo "Building for $TARGETOS/$TARGETARCH on $BUILDPLATFORM" && \
+    go mod tidy && \
     GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 \
     go build \
     -ldflags="-s -w \

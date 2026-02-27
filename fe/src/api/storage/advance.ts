@@ -74,6 +74,18 @@ export interface GetSubscribeUserResponse extends Models.PaginationResponse<Shar
   name: string // 订阅用户名
 }
 
+// 获取订阅用户所有资源查询参数
+export interface GetSubscribeUserAllQuery {
+  subscribeUser: string // 订阅用户名
+}
+
+// 获取订阅用户所有资源响应接口
+export interface GetSubscribeUserAllResponse {
+  name: string // 订阅用户名
+  total: number
+  data: ShareResourceInfo[]
+}
+
 // 分享信息接口
 export interface ShareInfo {
   id: string
@@ -123,6 +135,13 @@ export const getSubscribeUser = (
   params: GetSubscribeUserQuery
 ): Promise<ApiResponse<GetSubscribeUserResponse>> => {
   return api.get('/storage/advance/get_subscribe_user', { params }).then((res) => res.data)
+}
+
+// 获取订阅用户所有资源（不分页）
+export const getSubscribeUserAll = (
+  params: GetSubscribeUserAllQuery
+): Promise<ApiResponse<GetSubscribeUserAllResponse>> => {
+  return api.get('/storage/advance/get_subscribe_user_all', { params }).then((res) => res.data)
 }
 
 // 获取分享信息

@@ -62,8 +62,8 @@ func New(c *configs.RuntimeConfig) (ServiceContext, error) {
 func newServiceContext(c *configs.RuntimeConfig) (ServiceContext, error) {
 	var (
 		db     *gorm.DB
-		err    error
 		logger *zap.Logger
+		err    error
 	)
 
 	// 连接 db
@@ -91,7 +91,7 @@ func newServiceContext(c *configs.RuntimeConfig) (ServiceContext, error) {
 		return nil, err
 	}
 
-	taskEngine := initTaskEngine(logger)
+	taskEngine := initTaskEngine(logger, c.TaskEngine)
 
 	gLogger := zapgorm2.New(logger)
 	gLogger.SetAsDefault()
@@ -118,26 +118,21 @@ type mockServiceContext struct {
 }
 
 func (m *mockServiceContext) GetDB(ctx context.Context) *gorm.DB {
-	// 返回一个假的 gorm.DB，实际测试中可以使用 sqlite 内存数据库
 	return nil
 }
 
 func (m *mockServiceContext) GetLogger(name string, fields ...zap.Field) *zap.Logger {
-	// 返回一个 nop logger，不会输出任何日志
 	return zap.NewNop()
 }
 
 func (m *mockServiceContext) GetFileEnforcer() *casbin.Enforcer {
-	// 返回 nil，测试中不进行权限检查
 	return nil
 }
 
 func (m *mockServiceContext) Close() {
-	// mock 实现中不需要做任何清理工作
 }
 
 func (m *mockServiceContext) GetPort() int {
-	// 返回假的端口号
 	return 9999
 }
 
@@ -149,7 +144,6 @@ func (m *mockServiceContext) GetHTTPEngine() *gin.Engine {
 	return nil
 }
 
-// NewMockServiceContext 创建一个用于测试的 mock ServiceContext
 func NewMockServiceContext() ServiceContext {
 	return &mockServiceContext{}
 }

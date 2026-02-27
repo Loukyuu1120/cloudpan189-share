@@ -154,6 +154,7 @@ func Start(svc bootstrap.ServiceContext) {
 			storageAdvanceRouter.GET("/family/files", wrap(storageAdvanceHandler.GetFamilyFiles()))
 			storageAdvanceRouter.GET("/family/list", wrap(storageAdvanceHandler.FamilyList()))
 			storageAdvanceRouter.GET("/get_subscribe_user", wrap(storageAdvanceHandler.GetSubscribeUser()))
+			storageAdvanceRouter.GET("/get_subscribe_user_all", wrap(storageAdvanceHandler.GetSubscribeUserAll()))
 			storageAdvanceRouter.GET("/share_info", wrap(storageAdvanceHandler.GetShareInfo()))
 		}
 	}
@@ -222,9 +223,11 @@ func Start(svc bootstrap.ServiceContext) {
 			autoIngestRouter.POST("/plan/enable", wrap(autoIngestHandler.EnablePlan()))
 			autoIngestRouter.POST("/plan/disable", wrap(autoIngestHandler.DisablePlan()))
 			autoIngestRouter.POST("/plan/refresh", wrap(autoIngestHandler.Refresh()))
+			autoIngestRouter.POST("/plan/retry_failed", wrap(autoIngestHandler.RetryFailed()))
 			autoIngestRouter.POST("/plan/delete", wrap(autoIngestHandler.DeletePlan()))
 			autoIngestRouter.POST("/plan/update", wrap(autoIngestHandler.UpdatePlan()))
 			autoIngestRouter.GET("/log/list", wrap(autoIngestHandler.LogList()))
+			autoIngestRouter.POST("/log/delete_error", wrap(autoIngestHandler.DeleteErrorLogs()))
 		}
 	}
 

@@ -53,9 +53,10 @@ func (s *service) getDB(ctx context.Context) *gorm.DB {
 }
 
 var (
-	reFolderID   = regexp.MustCompile(`^\d+$`)
-	reShareLink  = regexp.MustCompile(`cloud\.189\.cn\/t\/([a-zA-Z0-9]+)`)
-	reAccessCode = regexp.MustCompile(`(?:\S+码|code)[:：]\s*([a-zA-Z0-9]+)`)
+	reFolderID       = regexp.MustCompile(`^\d+$`)
+	reShareLink      = regexp.MustCompile(`cloud\.189\.cn\/t\/([a-zA-Z0-9]+)`)
+	reAccessCode     = regexp.MustCompile(`(?:\S+码|code)[:：]\s*([a-zA-Z0-9]+)`)
+	reSubscribeLink = regexp.MustCompile(`content\.21cn\.com.*[?&]uuid=([a-zA-Z0-9]+)`)
 )
 
 // 实现 BatchParseText
@@ -83,17 +84,27 @@ func (s *service) BatchParseText(ctx context.Context, req *topic.BatchParseTextR
 		cleanLine = strings.ReplaceAll(cleanLine, "：", ":")
 
 		var (
-			shareCode  string
-			accessCode string
-			fileId     string
-			isShare    bool
-			isFolder   bool
+			shareCode    string
+			accessCode   string
+			fileId       string
+			isShare      bool
+			isFolder     bool
+			isSubscribe  bool
+			subscribeId  string
 		)
 
+		// 0. 尝试匹配订阅号链接 (优先级最高)
+		if matches := reSubscribeLink.FindStringSubmatch(cleanLine); len(matches) > 1 {
+			subscribeId = matches[1]
+			isSubscribe = true
+		}
+
 		// 1. 尝试匹配分享链接 (全行搜索)
-		if matches := reShareLink.FindStringSubmatch(cleanLine); len(matches) > 1 {
-			shareCode = matches[1]
-			isShare = true
+		if !isSubscribe {
+			if matches := reShareLink.FindStringSubmatch(cleanLine); len(matches) > 1 {
+				shareCode = matches[1]
+				isShare = true
+			}
 		}
 
 		// 2. 如果不是分享链接，尝试匹配纯数字文件夹ID
@@ -155,6 +166,21 @@ func (s *service) BatchParseText(ctx context.Context, req *topic.BatchParseTextR
 				Name:   name,
 				OsType: models.OsTypePersonFolder,
 				FileId: fileId,
+			})
+		} else if isSubscribe {
+			userInfo, err := s.cloudBridgeService.GetSubscribeUserInfo(ctx, subscribeId)
+			name := ""
+			if err == nil && userInfo != nil {
+				name = userInfo.Name
+			} else {
+				name = "未知订阅号_" + subscribeId
+			}
+
+			// 使用 subscribe 类型，只需 SubscribeUser，不需要 ShareCode
+			results = append(results, &topic.BatchParseItem{
+				Name:          name,
+				OsType:        models.OsTypeSubscribe,
+				SubscribeUser: subscribeId,
 			})
 		}
 	}

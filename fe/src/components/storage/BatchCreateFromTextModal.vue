@@ -5,8 +5,12 @@
         <n-alert type="info" show-icon title="使用说明" class="mb-4">
           <template #default>
             <div class="usage-guide">
-              <p>输入分享链接、分享码或文件夹ID，系统将自动识别名称。</p>
-              <p>点击“下一步”后，您可以批量设置挂载路径前缀。</p>
+              <p>输入分享链接、分享码、文件夹ID或订阅号链接，系统将自动识别名称。</p>
+              <p>支持格式：</p>
+              <p>• 分享链接：https://cloud.189.cn/t/xxxxx</p>
+              <p>• 文件夹ID：123456789</p>
+              <p>• 订阅号链接：https://content.21cn.com/h5/subscrip/... ?uuid=xxx</p>
+              <p>点击"下一步"后，您可以批量设置挂载路径前缀。</p>
             </div>
           </template>
         </n-alert>

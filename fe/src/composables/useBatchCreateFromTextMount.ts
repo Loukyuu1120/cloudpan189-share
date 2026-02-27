@@ -21,6 +21,7 @@ export function useBatchCreateFromTextMount() {
                             const mountItems = payload.items.map(item => ({
                                 name: item.name,
                                 osType: item.osType,
+                                subscribeUser: item.subscribeUser,
                                 shareCode: item.shareCode,
                                 shareAccessCode: item.shareAccessCode,
                                 fileId: item.fileId,

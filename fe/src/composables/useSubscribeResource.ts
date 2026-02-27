@@ -1,5 +1,5 @@
 import { reactive, computed, type Ref } from 'vue'
-import { getSubscribeUser } from '@/api/storage/advance'
+import { getSubscribeUser, getSubscribeUserAll } from '@/api/storage/advance'
 import type { ShareResourceInfo, GetSubscribeUserResponse } from '@/api/storage/advance'
 import type { ApiResponse } from '@/utils/api'
 import type { MessageApi } from 'naive-ui'
@@ -7,7 +7,7 @@ import type { MessageApi } from 'naive-ui'
 // 常量定义
 const PAGINATION_CONFIG = {
   DEFAULT_PAGE_SIZE: 30,
-  PAGE_SIZES: [20, 30, 50, 100] as number[],
+  PAGE_SIZES: [20, 30, 50, 100, 200, 500] as number[],
   DEFAULT_PAGE: 1,
 }
 
@@ -17,6 +17,7 @@ export function useSubscribeResource(subscribeUserId: Ref<string>, message: Mess
     userInfo: null as GetSubscribeUserResponse | null,
     list: [] as ShareResourceInfo[],
     loading: false,
+    loadingAll: false,
     searchKeyword: '',
     selected: [] as ShareResourceInfo[],
   })
@@ -120,6 +121,43 @@ export function useSubscribeResource(subscribeUserId: Ref<string>, message: Mess
     fetchResourceList()
   }
 
+  // 获取全部资源
+  const fetchAllResources = async () => {
+    if (!subscribeUserId.value.trim()) return false
+
+    resourceState.loadingAll = true
+    resourceState.selected = []
+    try {
+      const response = await getSubscribeUserAll({
+        subscribeUser: subscribeUserId.value.trim(),
+      })
+      if (response.data) {
+        resourceState.list = response.data.data || []
+        resourceState.userInfo = {
+          name: response.data.name,
+          data: response.data.data || [],
+          total: response.data.total,
+          currentPage: 1,
+          pageSize: response.data.total,
+        }
+        resourcePagination.itemCount = response.data.total || 0
+        resourcePagination.pageSize = response.data.total || 0
+        
+        message.success(`已加载全部 ${response.data.total} 个资源`)
+        return true
+      } else {
+        message.error(response.msg || '获取全部资源失败')
+        return false
+      }
+    } catch (error) {
+      console.error('获取全部资源失败:', error)
+      message.error('获取全部资源失败')
+      return false
+    } finally {
+      resourceState.loadingAll = false
+    }
+  }
+
   const checkedRowKeys = computed(() => resourceState.selected.map((r) => r.id))
 
   const handleCheckedRowKeysChange = (keys: Array<string | number>) => {
@@ -135,6 +173,7 @@ export function useSubscribeResource(subscribeUserId: Ref<string>, message: Mess
     hasResourceList,
     // methods
     fetchResourceList,
+    fetchAllResources,
     handleSearchResource,
     handleResetResourceSearch,
     handleResourcePageChange,

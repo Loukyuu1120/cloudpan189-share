@@ -21,8 +21,12 @@ type Handler interface {
 	LogList() httpcontext.HandlerFunc
 	// Refresh 刷新计划（下发订阅刷新请求）
 	Refresh() httpcontext.HandlerFunc
+	// RetryFailed 重试失败的任务
+	RetryFailed() httpcontext.HandlerFunc
 	// UpdatePlan 修改计划
 	UpdatePlan() httpcontext.HandlerFunc
+	// DeleteErrorLogs 删除错误日志
+	DeleteErrorLogs() httpcontext.HandlerFunc
 }
 
 var bi = httpcontext.NewBusinessGenerator(consts.BusCodeAutoIngestStartCode)
@@ -39,6 +43,7 @@ var (
 	codePlanNotFound      = bi.Next("自动挂载计划不存在")
 	codePlanInvalidSource = bi.Next("自动挂载计划来源类型不支持刷新")
 	codePlanQueryFailed   = bi.Next("查询自动挂载计划失败")
+	codeLogDeleteFailed   = bi.Next("删除日志失败")
 )
 
 type handler struct {

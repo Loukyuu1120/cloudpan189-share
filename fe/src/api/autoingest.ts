@@ -114,3 +114,13 @@ export const getAutoIngestLogList = (
 ): Promise<ApiResponse<Models.PaginationResponse<PlanLogResult>>> => {
   return api.get('/auto_ingest/log/list', { params }).then((res) => res.data)
 }
+
+// 重试失败的任务
+export const retryFailedAutoIngest = (data: { planId?: number }): Promise<ApiResponse> => {
+  return api.post('/auto_ingest/plan/retry_failed', data).then((res) => res.data)
+}
+
+// 删除错误日志
+export const deleteErrorLogs = (data: { planId?: number }): Promise<ApiResponse<number>> => {
+  return api.post('/auto_ingest/log/delete_error', data).then((res) => res.data)
+}

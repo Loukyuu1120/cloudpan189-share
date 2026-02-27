@@ -23,6 +23,8 @@ type AutoIngestPlan struct {
 	Offset             int64                 `gorm:"column:offset;type:bigint(20);default:0;" json:"offset"`                            // 偏移量
 	ParentPath         string                `gorm:"column:parent_path;type:varchar(255);not null;default:'';" json:"parentPath"`       // 父目录路径
 	OnConflict         autoingest.OnConflict `gorm:"column:on_conflict;type:varchar(255);not null;default:'rename';" json:"onConflict"` // 冲突处理策略
+	ConcurrentCount    int                   `gorm:"column:concurrent_count;default:4" json:"concurrentCount"`                         // 并发数
+	MaxRetryCount      int                   `gorm:"column:max_retry_count;default:3" json:"maxRetryCount"`                           // 最大重试次数
 	AddCount           int64                 `gorm:"column:add_count;type:bigint(20);default:0;" json:"addCount"`                       // 新增挂载数
 	FailedCount        int64                 `gorm:"column:failed_count;type:bigint(20);default:0;" json:"failedCount"`                 // 失败挂载数
 	Addition           datatypes.JSONMap     `gorm:"column:addition;type:json;default:'';" json:"addition"`

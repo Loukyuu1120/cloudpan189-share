@@ -68,4 +68,5 @@ type BatchParseItem struct {
 	ShareCode       string `json:"shareCode"`       // 分享码
 	ShareAccessCode string `json:"shareAccessCode"` // 提取码
 	FileId          string `json:"fileId"`          // 文件夹ID
+	SubscribeUser   string `json:"subscribeUser"`   // 订阅号用户ID
 }

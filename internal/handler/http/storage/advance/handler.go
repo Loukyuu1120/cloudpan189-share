@@ -12,6 +12,7 @@ type Handler interface {
 	GetFamilyFiles() httpcontext.HandlerFunc
 	GetPersonFiles() httpcontext.HandlerFunc
 	GetSubscribeUser() httpcontext.HandlerFunc
+	GetSubscribeUserAll() httpcontext.HandlerFunc
 	GetShareInfo() httpcontext.HandlerFunc
 }
 

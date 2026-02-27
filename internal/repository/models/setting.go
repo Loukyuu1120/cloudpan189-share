@@ -36,6 +36,7 @@ func (s *Setting) AfterFind(tx *gorm.DB) (err error) {
 type SettingAddition struct {
 	Keep                      string `json:"-"`
 	LocalProxy                bool   `json:"localProxy"`
+	LocalProxyURL             string `json:"localProxyURL"` // HTTP 代理地址，如 http://192.168.31.51:7890
 	MultipleStream            bool   `json:"multipleStream"`
 	MultipleStreamThreadCount int    `json:"multipleStreamThreadCount"`
 	MultipleStreamChunkSize   int64  `json:"multipleStreamChunkSize"`

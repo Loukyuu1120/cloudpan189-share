@@ -53,17 +53,20 @@ func (s *service) CreateStorage(ctx context.Context, req *CreateStorageRequest) 
 
 		return 0, err
 	} else if mp != nil {
-		return 0, errMountPointExists
+		// 路径已存在，返回已存在的挂载点ID而不是报错
+		ctx.Info("挂载点路径已存在，返回已存在的记录", zap.String("path", req.LocalPath), zap.Int64("exists_id", mp.ID))
+		return mp.FileId, nil
 	}
 
-	if _, err := s.virtualFileService.QueryByPath(ctx, req.LocalPath); !errors.Is(err, gorm.ErrRecordNotFound) {
+	if vf, err := s.virtualFileService.QueryByPath(ctx, req.LocalPath); !errors.Is(err, gorm.ErrRecordNotFound) {
 		if err != nil {
 			ctx.Error("查询虚拟文件路径失败", zap.Error(err), zap.String("path", req.LocalPath))
 
 			return 0, err
 		}
-
-		return 0, errVirtualFileExists
+		// 虚拟文件已存在，返回其ID
+		ctx.Info("虚拟文件路径已存在，返回已存在的记录", zap.String("path", req.LocalPath), zap.Int64("exists_id", vf.ID))
+		return vf.ID, nil
 	}
 
 	// 路径分割与父级创建

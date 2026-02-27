@@ -69,6 +69,16 @@
             >
             <n-button @click="handleResetResourceSearch" style="margin-left: 8px">重置</n-button>
           </div>
+          <div class="batch-select-actions">
+            <n-button
+              type="info"
+              :loading="resourceState.loadingAll"
+              :disabled="resourceState.loadingAll"
+              @click="handleFetchAllResources"
+            >
+              获取全部资源
+            </n-button>
+          </div>
         </div>
 
         <!-- 资源表格 -->
@@ -95,7 +105,7 @@
         </div>
 
         <!-- 分页 -->
-        <div v-if="hasResourceList" class="pagination-section">
+        <div v-if="hasResourceList && !isAllLoadedComputed" class="pagination-section">
           <n-pagination
             v-model:page="resourcePagination.page"
             v-model:page-size="resourcePagination.pageSize"
@@ -105,6 +115,9 @@
             @update:page="handleResourcePageChange"
             @update:page-size="handleResourcePageSizeChange"
           />
+        </div>
+        <div v-if="hasResourceList && isAllLoadedComputed" class="pagination-section">
+          <n-text depth="3">已加载全部 {{ resourcePagination.itemCount }} 个资源</n-text>
         </div>
       </div>
     </div>
@@ -190,6 +203,7 @@ const {
   hasSelectedResources,
   hasResourceList,
   fetchResourceList,
+  fetchAllResources,
   handleSearchResource,
   handleResetResourceSearch,
   handleResourcePageChange,
@@ -198,6 +212,23 @@ const {
   checkedRowKeys,
   handleCheckedRowKeysChange,
 } = useSubscribeResource(subscribeUserId, message)
+
+// 判断是否已加载全部资源
+const isAllLoaded = ref(false)
+
+// 判断是否已加载全部资源
+const isAllLoadedComputed = computed(() => {
+  return isAllLoaded.value || (resourceState.list.length > 0 && resourcePagination.itemCount > 0 && 
+         resourceState.list.length >= resourcePagination.itemCount)
+})
+
+// 获取全部资源
+const handleFetchAllResources = async () => {
+  const success = await fetchAllResources()
+  if (success) {
+    isAllLoaded.value = true
+  }
+}
 
 // 表格列定义
 const resourceColumns: DataTableColumns<ShareResourceInfo> = [
@@ -211,7 +242,7 @@ const resourceColumns: DataTableColumns<ShareResourceInfo> = [
     width: 80,
     align: 'center',
     ellipsis: { tooltip: true },
-    render: (_, index) => (resourcePagination.page - 1) * resourcePagination.pageSize + index + 1,
+    render: (_, index) => isAllLoadedComputed ? index + 1 : (resourcePagination.page - 1) * resourcePagination.pageSize + index + 1,
   },
   {
     title: '资源名称',

@@ -9,7 +9,7 @@ type getSubscribeUserRequest struct {
 	SubscribeUser string `form:"subscribeUser" binding:"required" example:"user123"`
 	Name          string `form:"name" example:"三生三世"`
 	CurrentPage   int    `form:"currentPage,default=1" binding:"required,min=1" example:"1"`
-	PageSize      int    `form:"pageSize,default=10" binding:"required,min=1,max=100" example:"10"`
+	PageSize      int    `form:"pageSize,default=30" binding:"required,min=1,max=500" example:"30"`
 }
 
 type getSubscribeUserResponse struct {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/xxcheng123/cloudpan189-share/internal/pkgs/taskengine"
@@ -14,6 +15,7 @@ import (
 	"github.com/xxcheng123/cloudpan189-share/internal/repository/models"
 	"github.com/xxcheng123/cloudpan189-share/internal/shared"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -57,6 +59,46 @@ func useMySqlDB(c *configs.Config) (db *gorm.DB, err error) {
 		return nil, errors.Wrap(err, "failed to connect to MySQL database")
 	}
 
+	sqlDB, err := db.DB()
+	if err == nil {
+		sqlDB.SetMaxOpenConns(25)
+		sqlDB.SetMaxIdleConns(5)
+		sqlDB.SetConnMaxLifetime(time.Hour)
+	}
+
+	if err = db.Use(new(TracePlugin)); err != nil {
+		return nil, errors.Wrap(err, "failed to register trace plugin")
+	}
+
+	return db, nil
+}
+
+func usePostgresDB(c *configs.Config) (db *gorm.DB, err error) {
+	if c.Postgres == nil {
+		return nil, errors.New("PostgreSQL configuration is required when using PostgreSQL database")
+	}
+
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=Asia/Shanghai",
+		c.Postgres.Host,
+		c.Postgres.User,
+		c.Postgres.Pass,
+		c.Postgres.DBName,
+		c.Postgres.Port,
+		c.Postgres.SSLMode,
+	)
+
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to connect to PostgreSQL database")
+	}
+
+	sqlDB, err := db.DB()
+	if err == nil {
+		sqlDB.SetMaxOpenConns(25)
+		sqlDB.SetMaxIdleConns(5)
+		sqlDB.SetConnMaxLifetime(time.Hour)
+	}
+
 	if err = db.Use(new(TracePlugin)); err != nil {
 		return nil, errors.Wrap(err, "failed to register trace plugin")
 	}
@@ -68,6 +110,8 @@ func connectDB(c *configs.Config) (db *gorm.DB, err error) {
 	switch c.DBType {
 	case "mysql":
 		return useMySqlDB(c)
+	case "postgres", "postgresql":
+		return usePostgresDB(c)
 	case "sqlite":
 		return useSQLiteDB(c)
 	default:
@@ -96,6 +140,41 @@ func assignShared(db *gorm.DB) (err error) {
 	return nil
 }
 
-func initTaskEngine(logger *zap.Logger) taskengine.TaskEngine {
-	return taskengine.NewTaskEngine(taskengine.WithLogger(logger.Named("task_engine")))
+func initTaskEngine(logger *zap.Logger, cfg *configs.TaskEngineConfig) taskengine.TaskEngine {
+	opts := []taskengine.EngineOption{
+		taskengine.WithLogger(logger.Named("task_engine")),
+	}
+
+	if cfg != nil {
+		if cfg.WorkerCount > 0 {
+			opts = append(opts, taskengine.EngineOption{
+				Options: []taskengine.OptionFunc{
+					taskengine.WithWorkerCount(cfg.WorkerCount),
+				},
+			})
+		}
+		if cfg.BufferSize > 0 {
+			opts = append(opts, taskengine.EngineOption{
+				Options: []taskengine.OptionFunc{
+					taskengine.WithBufferSize(cfg.BufferSize),
+				},
+			})
+		}
+		if cfg.ProcessTimeout > 0 {
+			opts = append(opts, taskengine.EngineOption{
+				Options: []taskengine.OptionFunc{
+					taskengine.WithProcessTimeout(time.Duration(cfg.ProcessTimeout) * time.Second),
+				},
+			})
+		}
+		if cfg.MaxRetry >= 0 {
+			opts = append(opts, taskengine.EngineOption{
+				Options: []taskengine.OptionFunc{
+					taskengine.WithMaxRetry(cfg.MaxRetry),
+				},
+			})
+		}
+	}
+
+	return taskengine.NewTaskEngine(opts...)
 }

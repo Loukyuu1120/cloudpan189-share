@@ -23,6 +23,15 @@ func (h *handler) BatchDelete() httpcontext.HandlerFunc {
 			return
 		}
 
+		// 先删除数据库中的挂载点记录
+		if err := h.mountPointService.BatchDelete(ctx.GetContext(), req.IDs); err != nil {
+			ctx.GetContext().Error("批量删除挂载点记录失败", zap.Error(err), zap.Int64s("ids", req.IDs))
+			ctx.Fail(busCodeBatchDeleteError.WithError(err))
+			return
+		}
+
+		ctx.GetContext().Info("批量删除挂载点记录成功", zap.Int("count", len(req.IDs)))
+
 		// 构造消息队列请求
 		task := &topic.FileBatchDeleteRequest{IDs: req.IDs}
 		body, _ := json.Marshal(task)
