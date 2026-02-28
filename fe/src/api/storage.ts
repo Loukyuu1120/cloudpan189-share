@@ -106,9 +106,33 @@ export interface StorageInfo extends Models.MountPoint {
 
 // ===== 存储管理接口 =====
 
+// 批量添加存储挂载请求接口
+export interface BatchAddStorageRequest {
+  items: AddStorageRequest[]
+}
+
+// 批量添加存储挂载响应接口
+export interface BatchAddStorageResponse {
+  successCount: number
+  failCount: number
+  results: {
+    localPath: string
+    id?: number
+    success: boolean
+    error?: string
+  }[]
+}
+
 // 添加存储挂载
 export const addStorage = (data: AddStorageRequest): Promise<ApiResponse<AddStorageResponse>> => {
   return api.post('/storage/add', data).then((res) => res.data)
+}
+
+// 批量添加存储挂载
+export const batchAddStorage = (
+  data: BatchAddStorageRequest
+): Promise<ApiResponse<BatchAddStorageResponse>> => {
+  return api.post('/storage/batch_add', data).then((res) => res.data)
 }
 
 // 删除存储挂载

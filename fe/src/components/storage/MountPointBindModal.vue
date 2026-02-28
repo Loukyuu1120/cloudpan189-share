@@ -134,7 +134,7 @@ import {
   NFormItem,
   NInputNumber,
 } from 'naive-ui'
-import { addStorage, type AddStorageRequest, type AddStorageResponse } from '@/api/storage'
+import { batchAddStorage, type AddStorageRequest, type BatchAddStorageResponse } from '@/api/storage'
 import type { ApiResponse } from '@/utils/api'
 import { getCloudTokenList } from '@/api/cloudtoken'
 import { getOsTypeDisplayName, getOsTypeColor } from '@/utils/osType'
@@ -159,7 +159,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'confirm', payload: AddStorageResponse[]): void
+  (e: 'confirm', payload: { id: number; path: string }[]): void
   (e: 'cancel'): void
 }
 
@@ -442,21 +442,25 @@ const buildRequests = (): AddStorageRequest[] => {
 }
 
 // 处理批量挂载结果
-const handleMountResults = (responses: ApiResponse<AddStorageResponse>[]) => {
-  const successResponses = responses
-    .filter((res) => res.code === 200)
-    .map((res) => res.data) as AddStorageResponse[]
-  const successCount = successResponses.length
-  const failCount = responses.length - successCount
+const handleMountResults = (response: ApiResponse<BatchAddStorageResponse>) => {
+  if (response.code !== 200) {
+    message.error(response.msg || '批量挂载失败')
+    return
+  }
 
-  if (failCount === 0) {
-    message.success(`成功挂载 ${successCount} 个存储点`)
-    emit('confirm', successResponses)
+  const { successCount, failCount, results } = response.data
+
+  const successItems = results.filter((r) => r.success).map((r) => ({
+    id: r.id,
+    path: r.localPath,
+  }))
+
+  if (successCount > 0) {
+    message.success(`成功挂载 ${successCount} 个存储点${failCount > 0 ? `，失败 ${failCount} 个` : ''}`)
+    emit('confirm', successItems)
   } else {
-    message.warning(`成功挂载 ${successCount} 个，失败 ${failCount} 个`)
-    if (successCount > 0) {
-      emit('confirm', successResponses)
-    }
+    const firstError = results.find((r) => !r.success)?.error
+    message.error(`挂载全部失败${firstError ? `: ${firstError}` : ''}`)
   }
 }
 
@@ -473,10 +477,10 @@ const handleConfirm = () => {
   // 构建请求数据
   const requests = buildRequests()
 
-  // 批量添加存储挂载
-  return Promise.all(requests.map((request) => addStorage(request)))
-    .then((responses) => {
-      handleMountResults(responses)
+  // 批量添加存储挂载（使用后台任务方式）
+  return batchAddStorage({ items: requests })
+    .then((response) => {
+      handleMountResults(response)
     })
     .catch((error) => {
       console.error('批量挂载失败:', error)

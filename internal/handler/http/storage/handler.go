@@ -15,6 +15,7 @@ import (
 
 type Handler interface {
 	Add() httpcontext.HandlerFunc
+	BatchAdd() httpcontext.HandlerFunc
 	Delete() httpcontext.HandlerFunc
 	BatchDelete() httpcontext.HandlerFunc
 	BatchParseFromText() httpcontext.HandlerFunc

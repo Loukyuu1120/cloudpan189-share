@@ -138,6 +138,7 @@ func Start(svc bootstrap.ServiceContext) {
 		storageRouter := openapiRouter.Group("/storage", wrap(userMiddleware.Auth()))
 		{
 			storageRouter.POST("/add", wrap(storageHandler.Add()))
+			storageRouter.POST("/batch_add", wrap(storageHandler.BatchAdd()))
 			storageRouter.POST("/delete", wrap(storageHandler.Delete()))
 			storageRouter.POST("/batch_delete", wrap(storageHandler.BatchDelete()))
 			storageRouter.POST("/batch_parse_text", wrap(storageHandler.BatchParseFromText()))
