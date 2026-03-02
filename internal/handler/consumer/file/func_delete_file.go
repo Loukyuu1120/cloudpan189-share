@@ -1,9 +1,11 @@
 package file
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/xxcheng123/cloudpan189-share/internal/framework/taskcontext"
+	"github.com/xxcheng123/cloudpan189-share/internal/services/filetasklog"
 	"github.com/xxcheng123/cloudpan189-share/internal/services/virtualfile"
 	"github.com/xxcheng123/cloudpan189-share/internal/shared"
 	"github.com/xxcheng123/cloudpan189-share/internal/types/topic"
@@ -21,6 +23,28 @@ func (h *handler) HandleBatchDelete() taskcontext.HandlerFunc {
 		}
 
 		h.logger.Info("消费者开始处理批量删除", zap.Int("count", len(req.IDs)))
+
+		// 创建任务日志
+		tracker, logErr := h.fileTaskLogService.Create(
+			ctx.GetContext(),
+			req.Topic().String(),
+			fmt.Sprintf("批量删除 %d 个挂载点", len(req.IDs)),
+			filetasklog.WithFile(0),
+			filetasklog.WithDesc(fmt.Sprintf("批量删除任务, 共 %d 个挂载点", len(req.IDs))),
+		)
+		if logErr != nil {
+			h.logger.Error("创建任务日志失败", zap.Error(logErr))
+		} else {
+			_ = h.fileTaskLogService.Running(ctx.GetContext(), tracker)
+		}
+
+		defer func() {
+			if tracker != nil {
+				if err := h.fileTaskLogService.Completed(ctx.GetContext(), tracker, tracker.WithCost()); err != nil {
+					h.logger.Error("更新任务日志失败", zap.Error(err))
+				}
+			}
+		}()
 
 		for _, id := range req.IDs {
 			targetFileID := id

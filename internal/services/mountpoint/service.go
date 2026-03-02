@@ -3,6 +3,7 @@ package mountpoint
 import (
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/xxcheng123/cloudpan189-share/internal/bootstrap"
 	"github.com/xxcheng123/cloudpan189-share/internal/framework/context"
@@ -28,6 +29,7 @@ type Service interface {
 	UpdateRefreshConfig(ctx context.Context, fileId int64, config RefreshConfig) error
 	ModifyToken(ctx context.Context, fid int64, tokenId int64) error
 	BatchParseText(ctx context.Context, req *topic.BatchParseTextRequest) ([]*topic.BatchParseItem, error)
+	UpdateRefreshTime(ctx context.Context, fileId int64) error
 }
 
 type service struct {
@@ -48,14 +50,19 @@ func NewService(
 	}
 }
 
+// UpdateRefreshTime 更新挂载点的刷新时间
+func (s *service) UpdateRefreshTime(ctx context.Context, fileId int64) error {
+	return s.getDB(ctx).Where("file_id = ?", fileId).Update("updated_at", time.Now()).Error
+}
+
 func (s *service) getDB(ctx context.Context) *gorm.DB {
 	return s.svc.GetDB(ctx).Model(new(models.MountPoint))
 }
 
 var (
-	reFolderID       = regexp.MustCompile(`^\d+$`)
-	reShareLink      = regexp.MustCompile(`cloud\.189\.cn\/t\/([a-zA-Z0-9]+)`)
-	reAccessCode     = regexp.MustCompile(`(?:\S+码|code)[:：]\s*([a-zA-Z0-9]+)`)
+	reFolderID      = regexp.MustCompile(`^\d+$`)
+	reShareLink     = regexp.MustCompile(`cloud\.189\.cn\/t\/([a-zA-Z0-9]+)`)
+	reAccessCode    = regexp.MustCompile(`(?:\S+码|code)[:：]\s*([a-zA-Z0-9]+)`)
 	reSubscribeLink = regexp.MustCompile(`content\.21cn\.com.*[?&]uuid=([a-zA-Z0-9]+)`)
 )
 
@@ -84,13 +91,13 @@ func (s *service) BatchParseText(ctx context.Context, req *topic.BatchParseTextR
 		cleanLine = strings.ReplaceAll(cleanLine, "：", ":")
 
 		var (
-			shareCode    string
-			accessCode   string
-			fileId       string
-			isShare      bool
-			isFolder     bool
-			isSubscribe  bool
-			subscribeId  string
+			shareCode   string
+			accessCode  string
+			fileId      string
+			isShare     bool
+			isFolder    bool
+			isSubscribe bool
+			subscribeId string
 		)
 
 		// 0. 尝试匹配订阅号链接 (优先级最高)

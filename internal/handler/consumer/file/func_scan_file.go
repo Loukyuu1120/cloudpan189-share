@@ -110,6 +110,15 @@ func (h *handler) ScanFile() taskcontext.HandlerFunc {
 				}), nil
 			}
 
+			// 扫描完成后更新挂载点的更新时间
+			defer func() {
+				if inputFile.TopId > 0 {
+					if err := h.mountPointService.UpdateRefreshTime(ctx, inputFile.TopId); err != nil {
+						ctx.Error("更新挂载点刷新时间失败", zap.Int64("mount_point_id", inputFile.TopId), zap.Error(err))
+					}
+				}
+			}()
+
 			var fileConverters []converter.VirtualFileConverter
 
 			switch inputFile.OsType {

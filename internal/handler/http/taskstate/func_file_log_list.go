@@ -77,8 +77,11 @@ func (h *handler) FileLogList() httpcontext.HandlerFunc {
 
 		for _, log := range taskLogList {
 			if log.Duration == 0 {
-				log.Duration = now.UnixMilli() - log.BeginAt.UnixMilli()
-			}
+				endTime := log.EndAt
+				if endTime == nil {
+					endTime = &now
+				}
+				log.Duration = endTime.UnixMilli() - log.BeginAt.UnixMilli()
 		}
 
 		ctx.Success(&fileLogListResponse{

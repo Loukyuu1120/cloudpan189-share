@@ -122,14 +122,22 @@ func (h *handler) BatchAdd() httpcontext.HandlerFunc {
 		}
 
 		for _, id := range successIds {
+			mountPoint, err := h.mountPointService.Query(ctx.GetContext(), id)
+			if err != nil {
+				continue
+			}
 			taskReq := &topic.FileScanFileRequest{
 				FileId: id,
 				Deep:   true,
 			}
 			body, _ := json.Marshal(taskReq)
 			bgCtx := context.NewContext(stdContext.Background())
+			fullPath := mountPoint.FullPath
+			if fullPath == "" {
+				fullPath = mountPoint.Name
+			}
 			_ = h.taskEngine.PushMessage(
-				bgCtx.WithValue(consts.CtxKeyFullPath, "").
+				bgCtx.WithValue(consts.CtxKeyFullPath, fullPath).
 					WithValue(consts.CtxKeyInvokeHandlerName, "批量挂载扫描"),
 				taskReq.Topic(), body)
 		}

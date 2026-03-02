@@ -17,6 +17,12 @@ export const useSharedStore = defineStore('shared', () => {
 
   const storageSetting = reactive<StorageType.StorageSetting>(load())
 
+  // 重置路径前缀（不保存到localStorage，用于订阅号挂载）
+  const resetPathPrefix = (prefix: string) => {
+    storageSetting.pathPrefix = prefix
+  }
+
+  // 监听变化保存到localStorage
   watch(
     () => storageSetting,
     (state) => {
@@ -25,5 +31,5 @@ export const useSharedStore = defineStore('shared', () => {
     { deep: true }
   )
 
-  return { storageSetting }
+  return { storageSetting, resetPathPrefix }
 })

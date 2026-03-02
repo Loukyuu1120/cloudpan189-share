@@ -20,7 +20,7 @@ func (t *Tracker) Cost() time.Duration {
 }
 
 func (t *Tracker) WithCost() utils.Field {
-	return utils.WithField("duration", t.Cost().Milliseconds())
+	return utils.WithField("duration", time.Since(t.start).Milliseconds())
 }
 
 func newTracker(id int64, start time.Time) *Tracker {

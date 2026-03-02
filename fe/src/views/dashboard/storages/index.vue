@@ -44,27 +44,60 @@
           上次刷新时间：{{ refreshTime.format('YYYY-MM-DD HH:mm:ss') }}
         </n-text>
       </div>
-      <div class="header-right">
+      <div class="header-right batch-mode">
         <template v-if="isBatchMode">
           <n-button
             :type="isAllSelected ? 'warning' : 'default'"
             @click="toggleSelectAll"
-            style="margin-right: 12px"
+            class="batch-btn"
           >
-            {{ isAllSelected ? '取消全选' : '全选当页' }}
+            {{ isAllSelected ? '取消当页' : '全选当页' }}
+          </n-button>
+          <n-button
+            :type="isAllSelectedAllPages ? 'warning' : 'info'"
+            @click="selectAllPages"
+            :loading="isSelectingAllPages"
+            class="batch-btn"
+          >
+            {{ isAllSelectedAllPages ? '取消全选' : '全选所有' }}
+          </n-button>
+          <n-button
+            type="info"
+            @click="handleBatchRefresh(false)"
+            class="batch-btn"
+            :disabled="selectedIds.length === 0"
+          >
+            <template #icon><n-icon><RefreshOutline /></n-icon></template>
+            刷新选中 ({{ selectedIds.length }})
+          </n-button>
+          <n-button
+            type="warning"
+            @click="handleBatchRefresh(true)"
+            class="batch-btn"
+            :disabled="selectedIds.length === 0"
+          >
+            <template #icon><n-icon><RefreshOutline /></n-icon></template>
+            深度刷新 ({{ selectedIds.length }})
+          </n-button>
+          <n-button
+            type="primary"
+            @click="showBatchModifyTokenModal = true"
+            class="batch-btn"
+            :disabled="selectedIds.length === 0"
+          >
+            <template #icon><n-icon><KeyOutline /></n-icon></template>
+            修改令牌 ({{ selectedIds.length }})
           </n-button>
           <n-button
             type="error"
             @click="handleBatchDelete"
-            style="margin-right: 12px"
+            class="batch-btn"
             :disabled="selectedIds.length === 0"
           >
-            <template #icon
-              ><n-icon><TrashOutline /></n-icon
-            ></template>
+            <template #icon><n-icon><TrashOutline /></n-icon></template>
             删除选中 ({{ selectedIds.length }})
           </n-button>
-          <n-button @click="exitBatchMode" style="margin-right: 12px">取消</n-button>
+          <n-button @click="exitBatchMode" class="batch-btn">取消</n-button>
         </template>
         <template v-else>
           <n-button @click="enterBatchMode" style="margin-right: 12px">批量管理</n-button>
@@ -248,7 +281,7 @@
             <!-- 最近一次运行日志 -->
             <div v-if="storage.taskLogs && storage.taskLogs.length > 0" class="info-item">
               <div class="task-log-header">
-                <div class="task-log-left">
+                <div class="task-log-first-row">
                   <n-popover trigger="hover">
                     <template #trigger>
                       <div class="info-label">
@@ -266,16 +299,18 @@
                       {{ storage.taskLogs[0].desc }}
                     </n-text>
                   </n-popover>
+                  <n-popover trigger="hover" :disabled="storage.taskLogs[0].result ? false : true">
+                    <template #trigger>
+                      <n-tag :type="getTaskStatusInfo(storage.taskLogs[0].status).type" size="small">
+                        {{ getTaskStatusInfo(storage.taskLogs[0].status).text }}
+                      </n-tag>
+                    </template>
+                    {{ storage.taskLogs[0].result }}
+                  </n-popover>
                 </div>
-
-                <n-popover trigger="hover" :disabled="storage.taskLogs[0].result ? false : true">
-                  <template #trigger>
-                    <n-tag :type="getTaskStatusInfo(storage.taskLogs[0].status).type" size="small">
-                      {{ getTaskStatusInfo(storage.taskLogs[0].status).text }}
-                    </n-tag>
-                  </template>
-                  {{ storage.taskLogs[0].result }}
-                </n-popover>
+                <div v-if="storage.enableAutoRefresh" class="next-run-time">
+                  <n-text depth="3">下次 {{ formatNextRunTime(storage) }}</n-text>
+                </div>
               </div>
               <div class="task-log-content"></div>
             </div>
@@ -468,6 +503,34 @@
         </n-button>
       </template>
     </n-modal>
+
+    <!-- 批量修改令牌弹窗 -->
+    <n-modal v-model:show="showBatchModifyTokenModal" preset="dialog" title="批量修改令牌">
+      <div class="modify-token-config">
+        <n-form label-placement="left" label-width="100px">
+          <n-form-item label="已选中">
+            <n-text>{{ selectedIds.length }} 个挂载点</n-text>
+          </n-form-item>
+
+          <n-form-item label="选择令牌">
+            <n-select
+              v-model:value="batchModifyTokenId"
+              :options="cloudTokenOptions"
+              placeholder="请选择要绑定的令牌"
+              clearable
+              style="width: 100%"
+            />
+          </n-form-item>
+        </n-form>
+      </div>
+
+      <template #action>
+        <n-button @click="showBatchModifyTokenModal = false">取消</n-button>
+        <n-button type="primary" @click="handleBatchModifyTokenConfirm" :loading="modifyTokenSubmitting">
+          确认修改
+        </n-button>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -521,6 +584,8 @@ import {
   toggleAutoRefresh,
   modifyToken,
   batchDeleteStorage,
+  batchRefreshStorage,
+  batchModifyToken,
 } from '@/api/storage'
 import type { StorageInfo } from '@/api/storage'
 import { getCloudTokenList } from '@/api/cloudtoken'
@@ -545,6 +610,8 @@ const selectedTaskLogStatus = ref<string>('')
 const showAutoRefreshModal = ref(false)
 const showPageSettingsModal = ref(false)
 const showModifyTokenModal = ref(false)
+const showBatchModifyTokenModal = ref(false)
+const batchModifyTokenId = ref<number | null>(null)
 
 const subscribeMount = useSubscribeMount()
 const shareMount = useShareMount()
@@ -613,6 +680,25 @@ const handlePageSizeChange = (pageSize: number) => {
 }
 
 const refreshTime = ref(dayjs())
+
+// 计算下一次运行时间
+const getNextRunTime = (storage: StorageInfo) => {
+  if (!storage.enableAutoRefresh || !storage.refreshInterval) return null
+  const lastRun = storage.updatedAt ? dayjs(storage.updatedAt) : null
+  if (!lastRun) return null
+  return lastRun.add(storage.refreshInterval, 'minute')
+}
+
+// 格式化下一次运行时间
+const formatNextRunTime = (storage: StorageInfo) => {
+  const nextRun = getNextRunTime(storage)
+  if (!nextRun) return ''
+  const now = dayjs()
+  if (nextRun.isBefore(now)) {
+    return '即将运行'
+  }
+  return nextRun.format('MM-DD HH:mm')
+}
 
 // 使用页面自动刷新store
 const pageAutoRefreshStore = usePageAutoRefreshStore()
@@ -891,6 +977,41 @@ const toggleSelectAll = () => {
   }
 }
 
+// 全选所有页
+const isSelectingAllPages = ref(false)
+const isAllSelectedAllPages = computed(() => {
+  const total = paginationReactive.itemCount || 0
+  return total > 0 && selectedIds.value.length === total
+})
+const selectAllPages = () => {
+  const total = paginationReactive.itemCount || 0
+  if (selectedIds.value.length === total) {
+    selectedIds.value = []
+    return
+  }
+  isSelectingAllPages.value = true
+  // 保存当前分页设置
+  const originalPageSize = paginationReactive.pageSize
+  // 获取所有数据
+  getStorageList({ currentPage: 1, pageSize: total })
+    .then((res) => {
+      if (res.data?.data) {
+        const allIds = res.data.data.map((item: StorageInfo) => item.id)
+        selectedIds.value = [...allIds]
+      }
+    })
+    .catch((error) => {
+      console.error('获取全量数据失败:', error)
+      message.error('获取全量数据失败')
+    })
+    .finally(() => {
+      isSelectingAllPages.value = false
+      // 恢复分页设置并刷新列表
+      paginationReactive.pageSize = originalPageSize
+      fetchStorageList()
+    })
+}
+
 // 批量操作状态
 const isBatchMode = ref(false)
 const selectedIds = ref<number[]>([])
@@ -946,6 +1067,57 @@ const handleBatchDelete = () => {
         })
     },
   })
+}
+
+// 处理批量刷新
+const handleBatchRefresh = (deep: boolean) => {
+  if (selectedIds.value.length === 0) return
+
+  const refreshType = deep ? '深度刷新' : '普通刷新'
+  
+  dialog.warning({
+    title: `批量${refreshType}`,
+    content: `确定要${refreshType}选中的 ${selectedIds.value.length} 个挂载点吗？`,
+    positiveText: '确认刷新',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      message.loading(`正在批量${refreshType}...`)
+
+      batchRefreshStorage({ ids: selectedIds.value, deep })
+        .then((res) => {
+          message.success(res?.msg || `批量${refreshType}任务已提交`)
+          exitBatchMode()
+        })
+        .catch((error) => {
+          message.error(error?.message || `批量${refreshType}失败`)
+        })
+    },
+  })
+}
+
+// 确认批量修改令牌
+const handleBatchModifyTokenConfirm = () => {
+  if (selectedIds.value.length === 0 || !batchModifyTokenId.value) return
+  
+  modifyTokenSubmitting.value = true
+  
+  batchModifyToken({
+    ids: selectedIds.value,
+    tokenId: batchModifyTokenId.value,
+  })
+    .then((res) => {
+      message.success(res?.msg || '批量修改令牌成功')
+      showBatchModifyTokenModal.value = false
+      exitBatchMode()
+      fetchStorageList()
+    })
+    .catch((error) => {
+      console.error('批量修改令牌失败:', error)
+      message.error(error?.message || '批量修改令牌失败')
+    })
+    .finally(() => {
+      modifyTokenSubmitting.value = false
+    })
 }
 
 // 处理编辑自动刷新
@@ -1194,6 +1366,16 @@ onUnmounted(() => {
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.header-right.batch-mode {
+  flex-wrap: wrap;
+}
+
+.header-right .batch-btn {
+  margin-bottom: 4px;
 }
 
 .header-right .n-button:hover {
@@ -1479,10 +1661,16 @@ onUnmounted(() => {
 /* 任务日志样式 */
 .task-log-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 6px;
+}
+
+.task-log-first-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .task-log-left {
@@ -1500,6 +1688,12 @@ onUnmounted(() => {
 .task-log-time {
   font-size: 12px;
   color: var(--n-text-color-3);
+}
+
+.next-run-time {
+  font-size: 12px;
+  color: var(--n-text-color-3);
+  margin-top: 4px;
 }
 
 .task-log-content {

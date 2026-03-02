@@ -19,6 +19,8 @@ type Handler interface {
 	Delete() httpcontext.HandlerFunc
 	BatchDelete() httpcontext.HandlerFunc
 	BatchParseFromText() httpcontext.HandlerFunc
+	BatchRefresh() httpcontext.HandlerFunc
+	BatchModifyToken() httpcontext.HandlerFunc
 	List() httpcontext.HandlerFunc
 	SelectList() httpcontext.HandlerFunc
 	Refresh() httpcontext.HandlerFunc

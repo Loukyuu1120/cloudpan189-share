@@ -151,6 +151,7 @@ export interface MountItem {
   disableSwitchCloudToken?: boolean
   fileId?: string
   familyId?: string
+  userName?: string
 }
 
 interface Props {
@@ -308,16 +309,31 @@ const columns: DataTableColumns<TableRow> = [
 
 // 初始化表格数据
 const initTableData = () => {
+  // 如果有用户名，强制设置默认路径前缀（覆盖localStorage保存的值）
+  const firstItemWithUserName = props.items.find(item => item.userName)
+  if (firstItemWithUserName?.userName) {
+    // 强制设置为订阅号默认路径
+    storageSetting.value.pathPrefix = `/电影/${firstItemWithUserName.userName}/`
+  }
+  
   const newItems = props.items.map(
-    (item, index) =>
-      ({
+    (item, index) => {
+      // 构建路径：路径前缀 + 名称
+      let localPath: string
+      if (item.userName) {
+        localPath = `${storageSetting.value.pathPrefix || ''}${item.name}`
+      } else {
+        localPath = `${storageSetting.value.pathPrefix || '/'}${item.name}`
+      }
+      return {
         ...item,
         id: `item_${index}`,
-        localPath: `${storageSetting.value.pathPrefix || '/'}${item.name}`,
+        localPath,
         selectedCloudToken: item.disableSwitchCloudToken
           ? item.cloudToken
           : storageSetting.value.selectedToken,
-      }) as TableRow
+      } as TableRow
+    }
   )
   tableData.length = 0
   tableData.push(...newItems)
@@ -443,15 +459,15 @@ const buildRequests = (): AddStorageRequest[] => {
 
 // 处理批量挂载结果
 const handleMountResults = (response: ApiResponse<BatchAddStorageResponse>) => {
-  if (response.code !== 200) {
+  if (response.code !== 200 || !response.data) {
     message.error(response.msg || '批量挂载失败')
     return
   }
 
   const { successCount, failCount, results } = response.data
 
-  const successItems = results.filter((r) => r.success).map((r) => ({
-    id: r.id,
+  const successItems = results.filter((r) => r.success && r.id !== undefined).map((r) => ({
+    id: r.id as number,
     path: r.localPath,
   }))
 

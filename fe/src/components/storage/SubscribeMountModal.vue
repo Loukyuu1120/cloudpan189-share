@@ -227,6 +227,9 @@ const handleFetchAllResources = async () => {
   const success = await fetchAllResources()
   if (success) {
     isAllLoaded.value = true
+    // 自动勾选所有资源
+    resourceState.selected = [...resourceState.list]
+    message.success(`已加载全部 ${resourceState.list.length} 个资源并全选`)
   }
 }
 
@@ -309,12 +312,15 @@ const handleConfirm = () => {
     message.warning('请选择要挂载的资源')
     return
   }
+  // 获取用户名
+  const userName = resourceState.userInfo?.name || ''
   const itemsToMount = resourceState.selected.map((resource) => ({
     name: resource.name,
     osType: OS_TYPES.SUBSCRIBE_SHARE_FOLDER,
     subscribeUser: subscribeUserId.value.trim(),
     shareCode: resource.accessCode,
     fileId: resource.id,
+    userName: userName,
   }))
 
   mountPointBind.show(itemsToMount).then((payload) => {

@@ -143,7 +143,6 @@ export function useSubscribeResource(subscribeUserId: Ref<string>, message: Mess
         resourcePagination.itemCount = response.data.total || 0
         resourcePagination.pageSize = response.data.total || 0
         
-        message.success(`已加载全部 ${response.data.total} 个资源`)
         return true
       } else {
         message.error(response.msg || '获取全部资源失败')

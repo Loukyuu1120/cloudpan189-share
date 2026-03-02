@@ -145,6 +145,28 @@ export const batchDeleteStorage = (data: BatchDeleteStorageRequest): Promise<Api
   return api.post('/storage/batch_delete', data).then((res) => res.data)
 }
 
+// 批量刷新存储挂载请求接口
+export interface BatchRefreshStorageRequest {
+  ids: number[]
+  deep?: boolean // 是否深度刷新
+}
+
+// 批量刷新存储挂载
+export const batchRefreshStorage = (data: BatchRefreshStorageRequest): Promise<ApiResponse> => {
+  return api.post('/storage/batch_refresh', data).then((res) => res.data)
+}
+
+// 批量修改存储挂载令牌请求接口
+export interface BatchModifyTokenRequest {
+  ids: number[]
+  tokenId: number // 新的令牌ID
+}
+
+// 批量修改存储挂载令牌
+export const batchModifyToken = (data: BatchModifyTokenRequest): Promise<ApiResponse> => {
+  return api.post('/storage/batch_modify_token', data).then((res) => res.data)
+}
+
 // 批量解析响应项接口
 export interface BatchParseItem {
   name: string
